@@ -1,9 +1,12 @@
 import { GetStaticPaths, GetStaticProps } from "next";
 import Image from "next/future/image";
+import axios from 'axios';
 import { useRouter } from "next/router"
 import Stripe from "stripe";
 import { stripe } from "../../lib/stripe";
 import { ImageContainer, ProductContainer, ProductDetails } from "../../styles/pages/product";
+import { ICheckoutResponse } from "../api/checkout";
+import { useState } from "react";
 
 export interface IProduct {
   id: string;
@@ -11,6 +14,7 @@ export interface IProduct {
   description: string;
   imageUrl: string;
   price: string;
+  defaultPriceId: string;
 }
 
 interface ProductProps {
@@ -18,6 +22,21 @@ interface ProductProps {
 }
 
 export default function Product({ product }: ProductProps) {
+  const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
+  const { push, asPath } = useRouter();
+  
+  const handleBuyProduct = async () => {
+    try {
+      setIsCheckoutLoading(true);
+      const checkoutData = { priceId: product.defaultPriceId, productPath: asPath }
+      const { data } = await axios.post<ICheckoutResponse>('/api/checkout', checkoutData);
+      push(data.checkoutUrl);
+    } catch (err) {
+      setIsCheckoutLoading(false);
+      alert('Falha no checkout');
+    }
+    
+  }
 
   return (
     <ProductContainer>
@@ -29,7 +48,7 @@ export default function Product({ product }: ProductProps) {
         <span>{ product.price }</span>
         <p>{ product.description }</p>
         
-        <button>Comprar agora</button>
+        <button disabled={isCheckoutLoading} onClick={handleBuyProduct}>Comprar agora</button>
       </ProductDetails>
     </ProductContainer>
   )
@@ -38,7 +57,7 @@ export default function Product({ product }: ProductProps) {
 export const getStaticPaths: GetStaticPaths = async () => {
   return {
     paths: [],
-    fallback: true,
+    fallback: 'blocking',
   }
 }
 
@@ -61,6 +80,7 @@ export const getStaticProps: GetStaticProps<any, { id: string }> = async ({ para
         description: product.description,
         imageUrl: product.images[0],
         price: priceFormatted,
+        defaultPriceId: price.id,
       }
     },
     revalidate: 60 * 60 * 1, // 1 hour
