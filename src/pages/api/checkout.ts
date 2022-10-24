@@ -16,7 +16,7 @@ const handler: NextApiHandler = async (req, res) => {
     return res.status(400).json({ error: 'Price not found.' });
   }
 
-  const successUrl = `${process.env.NEXT_URL}/success`;
+  const successUrl = `${process.env.NEXT_URL}/success?session_id={CHECKOUT_SESSION_ID}`;
   const cancelUrl = productPath ? `${process.env.NEXT_URL}${productPath}` : `${process.env.NEXT_URL}/`;
   
   const checkoutSession = await stripe.checkout.sessions.create({
